@@ -210,7 +210,8 @@
       const rows = items.map((r, i) => { const o = { ...r, sort_order: i }; delete o.updated_at; if (!o.id) delete o.id; return o; });
       let error = null;
       if (removed.size) ({ error } = await sb.from(s.table).delete().in('id', [...removed]));
-      if (!error && rows.length) ({ error } = await sb.from(s.table).upsert(rows));
+      // defaultToNull:false lets new rows (no id yet) take the database default for id and any missing column.
+      if (!error && rows.length) ({ error } = await sb.from(s.table).upsert(rows, { defaultToNull: false }));
       btn.disabled = false;
       if (error) return say($('#st'), error.message, 'err');
       removed.clear(); panelEl.dataset.dirty = '0';
