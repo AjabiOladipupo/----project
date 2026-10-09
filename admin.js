@@ -56,17 +56,6 @@
     const { error } = await sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
     if (error) say(authStatus, error.message, 'err');
   });
-  $('#signup').addEventListener('click', async () => {
-    const f = new FormData($('#auth-form'));
-    const email = String(f.get('email') || '').trim(), password = String(f.get('password') || '');
-    if (email.toLowerCase() !== cfg.ADMIN_EMAIL.toLowerCase()) return say(authStatus, 'Use the admin email: ' + cfg.ADMIN_EMAIL, 'err');
-    if (password.length < 8) return say(authStatus, 'Choose a password of at least 8 characters.', 'err');
-    say(authStatus, 'Creating account…');
-    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href } });
-    if (error) return say(authStatus, error.message, 'err');
-    if (data.session) return; // auto-confirmed
-    say(authStatus, 'Check your inbox and click the confirmation link, then sign in.', 'ok');
-  });
   $('#reset').addEventListener('click', async () => {
     const email = String(new FormData($('#auth-form')).get('email') || '').trim();
     if (!email) return say(authStatus, 'Enter your email first.', 'err');
@@ -75,12 +64,31 @@
   });
   signoutBtn.addEventListener('click', () => sb.auth.signOut());
 
-  sb.auth.onAuthStateChange((_event, session) => {
+  // Password recovery: Supabase signs the user in from the emailed link and fires PASSWORD_RECOVERY.
+  const recoverEl = $('#recover');
+  let recovering = false;
+  $('#recover-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const st = $('#recover-status');
+    say(st, 'Saving…');
+    const { error } = await sb.auth.updateUser({ password: new FormData(e.target).get('password') });
+    if (error) return say(st, error.message, 'err');
+    recovering = false; recoverEl.hidden = true; say(st, '');
+    const { data } = await sb.auth.getSession();
+    render(data.session);
+  });
+
+  const render = (session) => {
     const user = session?.user;
     const isAdmin = user && user.email.toLowerCase() === cfg.ADMIN_EMAIL.toLowerCase();
+    if (recovering) { authEl.hidden = true; appEl.hidden = true; recoverEl.hidden = false; signoutBtn.hidden = false; return; }
     authEl.hidden = !!isAdmin; appEl.hidden = !isAdmin; signoutBtn.hidden = !user;
     if (user && !isAdmin) say(authStatus, `Signed in as ${user.email}, but only ${cfg.ADMIN_EMAIL} can edit. Sign out and use the admin account.`, 'err');
     if (isAdmin) { $('#side .meta') || buildSide(); if (!panelEl.dataset.section) show('settings'); }
+  };
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') recovering = true;
+    render(session);
   });
 
   // ---------- Navigation ----------
@@ -141,7 +149,7 @@
       const v = row[f.k];
       if (f.t === 'check') return `<label class="check"><input type="checkbox" name="${f.k}" ${v ? 'checked' : ''}/> ${esc(f.l)}</label>`;
       if (f.t === 'textarea') return `<label class="f${f.full ? ' full' : ''}"><span>${esc(f.l)}</span><textarea class="in" name="${f.k}">${esc(v)}</textarea></label>`;
-      if (f.t === 'lines') return `<label class="f full"><span>${esc(f.l)}</span><textarea class="in" name="${f.k}" style="min-height:140px">${esc((v || []).join('\n'))}</textarea></label>`;
+      if (f.t === 'lines') return `<label class="f full"><span>${esc(f.l)}</span><textarea class="in lines" name="${f.k}">${esc((v || []).join('\n'))}</textarea></label>`;
       if (f.t === 'date') return `<label class="f"><span>${esc(f.l)}</span><input class="in" type="date" name="${f.k}" value="${esc(v || '')}" /></label>`;
       return `<label class="f"><span>${esc(f.l)}</span><input class="in" name="${f.k}" value="${esc(v)}" /></label>`;
     };
@@ -156,7 +164,7 @@
           <button class="btn danger small" type="button" data-act="del">Delete</button></div>
         <div class="${grid.length > 2 ? 'grid3' : 'grid2'}">${grid.map((f) => field(f, row)).join('')}</div>
         ${full.map((f) => field(f, row)).join('')}
-        ${checks.length ? `<div style="display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 12px">${checks.map((f) => field(f, row)).join('')}</div>` : ''}
+        ${checks.length ? `<div class="checks">${checks.map((f) => field(f, row)).join('')}</div>` : ''}
       </div>`;
     };
     const draw = () => {

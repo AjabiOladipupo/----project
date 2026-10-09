@@ -4,14 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#1b1b1b" />
-  <script>
-    (function () {
-      try {
-        // Light (lime) is the default; dark only when the visitor chose it.
-        if (localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-      } catch (e) {}
-    })();
-  </script>
+  <script src="theme-init.js"></script>
   <title>₯$ Oladipupo</title>
   <meta name="description" content="Hi, my name is Oladipupo. Vibe coded projects, data and business analysis projects, and a blog." />
   <link rel="canonical" href="https://www.oladipupo.com.ng/" />
@@ -143,7 +136,7 @@
   </footer>
 
   <script src="site.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
   <script src="config.js"></script>
   <script src="content.js"></script>
 </body>
